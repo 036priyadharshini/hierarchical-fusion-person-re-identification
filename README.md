@@ -1,8 +1,4 @@
-# hierarchical-fusion-person-re-identification
-Hierarchical fusion of gait and visual hotspot features for cross-camera person re-identification using OSNet, Hi-AFA, and multi-modal feature fusion
 # Hierarchical Fusion of Gait and Visual Hotspot Feature Aggregation for Cross-Camera Person Re-Identification
-
-**M.E. Research Project | Government College of Technology, Coimbatore | 2025**
 
 Person re-identification across non-overlapping surveillance cameras — combining 
 appearance, gait dynamics, biometric features, and attention-driven hotspot detection 
