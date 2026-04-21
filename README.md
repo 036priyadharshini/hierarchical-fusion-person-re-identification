@@ -138,23 +138,3 @@ python src/test.py \
 
 ---
 
-## Project Report
-
-Full methodology, literature review, and result analysis available in 
-[`docs/project_report.pdf`](docs/project_report.pdf).
-
----
-
-## Citation
-
-If you find this work useful:
-
-```
-@project{priyadharshini2025reid,
-  title={Hierarchical Fusion of Gait and Visual Hotspot Feature 
-         Aggregation for Cross-Camera Person Re-Identification},
-  author={Priyadharshini G},
-  institution={Government College of Technology, Coimbatore},
-  year={2025}
-}
-```
