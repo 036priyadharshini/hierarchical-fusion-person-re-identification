@@ -2,7 +2,7 @@
 
 Person re-identification across non-overlapping surveillance cameras using a ResNet50-IBN backbone, Generalized Mean (GeM) pooling, and a Focal Tversky Loss-centered multi-loss strategy. During inference, a distribution-aware optimized k-reciprocal re-ranking refines retrieval rankings without modifying learned features.
 
-Published as: *Loss-Aware Metric Learning with Optimized Re-Ranking for Efficient Person Re-Identification*, Government College of Technology, Coimbatore.
+Published as: *Loss-Aware Metric Learning with Optimized Re-Ranking for Efficient Person Re-Identification*, in IEEE INTERSYS Conference, 2026.
 
 ---
 
