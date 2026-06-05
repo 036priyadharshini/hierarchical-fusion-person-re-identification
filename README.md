@@ -1,140 +1,142 @@
-# Hierarchical Fusion of Gait and Visual Hotspot Feature Aggregation for Cross-Camera Person Re-Identification
+# Loss-Aware Metric Learning for Efficient Person Re-Identification
 
-Person re-identification across non-overlapping surveillance cameras — combining 
-appearance, gait dynamics, biometric features, and attention-driven hotspot detection 
-in a unified multi-modal framework.
+Person re-identification across non-overlapping surveillance cameras using a ResNet50-IBN backbone, Generalized Mean (GeM) pooling, and a Focal Tversky Loss-centered multi-loss strategy. During inference, a distribution-aware optimized k-reciprocal re-ranking refines retrieval rankings without modifying learned features.
+
+Published as: *Loss-Aware Metric Learning with Optimized Re-Ranking for Efficient Person Re-Identification*, Government College of Technology, Coimbatore.
 
 ---
 
 ## Results
 
-| Dataset | Rank-1 | Rank-5 | mAP | IDF1 | IDSW/100 |
-|---------|--------|--------|-----|------|----------|
-| MARS | 91.5% | 96.1% | 88.2% | 91.2% | 1.2 |
-| DukeMTMC-VideoReID | 97.2% | 99.1% | 96.8% | 96.5% | 0.6 |
+### Market-1501
+
+| Setting | mAP (%) | Rank-1 (%) |
+|---|---|---|
+| Without re-ranking | 89.4 | 95.4 |
+| Default re-ranking | 94.6 | 96.2 |
+| Optimized re-ranking (proposed) | **95.1** | **96.3** |
+
+### DukeMTMC-reID
+
+| Setting | mAP (%) | Rank-1 (%) |
+|---|---|---|
+| Without re-ranking | 80.8 | 90.2 |
+| Default re-ranking | 89.9 | 92.2 |
+| Optimized re-ranking (proposed) | **92.05** | **93.3** |
+
+### Comparison with state-of-the-art (Market-1501)
+
+| Method | Backbone | mAP (%) | Rank-1 (%) |
+|---|---|---|---|
+| PCB | ResNet50 | 77.4 | 92.3 |
+| AGW | ResNet50 | 87.8 | 95.1 |
+| TransReID | ViT | 89.5 | 95.2 |
+| **Proposed (w/ optimized RR)** | **ResNet50-IBN** | **95.1** | **96.3** |
 
 ---
 
-## The Problem
+## Method
 
-Standard Re-ID systems fail when:
-- People wear similar or identical clothing
-- The person is partially occluded
-- Camera angle changes drastically between views
-- Lighting conditions vary significantly
+### Architecture
 
-This project addresses all four by fusing **what a person looks like** with 
-**how a person moves**.
+- **Backbone:** ResNet50-IBN — IBN blocks in layers 2 and 3 improve generalization across illumination and camera variation. Stride in layer4 modified from 2 to 1 to preserve spatial resolution.
+- **Pooling:** Generalized Mean (GeM) pooling with learnable parameter p=3, balancing between average and max pooling.
+- **Neck:** Batch Normalization Neck (BNNeck) — decouples metric learning from classification space. Normalized features used for retrieval; unnormalized features used for metric loss during training.
 
----
+### Multi-Loss Training
 
-## Architecture
+Four losses jointly optimize inter-class separability and intra-class compactness:
 
-![Architecture](docs/architecture.png)
+```
+L_total = L_FTL + L_CE + L_Triplet + 0.0005 * L_Center
+```
 
-The pipeline consists of five stages:
+- **Focal Tversky Loss (core):** Controls asymmetric false positive/negative penalties. Parameters: α=0.7, β=0.3, γ=0.75. Addresses class imbalance and hard identity samples.
+- **Label-smoothed cross-entropy:** Stabilizes identity classification.
+- **Batch-hard triplet loss:** Enforces inter-class separation in embedding space.
+- **Center loss:** Reduces intra-class variance.
 
-1. **Initial Feature Extraction** — OSNet backbone processes 384×128 RGB 
-   person crops through multi-scale convolution blocks, producing a 
-   24×8×512 shared feature map
-2. **Human Hotspot Detection** — Saliency-based attention highlights the 
-   top-50 discriminative body regions (head, shoulders, torso) that carry 
-   identity information even under partial occlusion
-3. **Hierarchical Multi-Branch Structure (Hi-AFA)** — Four parallel branches 
-   capture fine-grained textures → body parts → structural cues → global 
-   appearance, with cross-branch refinement
-4. **Gait Feature Extraction** — CNN-RNN model trained on CASIA-B extracts 
-   a 512-D temporal motion embedding encoding stride, rhythm, and limb 
-   dynamics
-5. **Multi-Modal Fusion** — Appearance (8704-D) + biometric (3072-D) + 
-   hotspot (512-D) + gait (512-D) → compressed to 2048-D identity embedding
+### Optimized K-Reciprocal Re-Ranking
 
----
+Final distance combines Jaccard (neighbourhood structure) and Euclidean (global similarity):
 
-## Key Modules
+```
+d_final = (1 - λ) * d_Jaccard + λ * d_Euclidean
+```
 
-### Feature Suppression Operation (FSO)
-Prevents the model from over-relying on dominant visual regions by masking 
-highly activated areas during training, forcing discovery of secondary 
-discriminative cues.
+Parameters tuned via distribution-aware optimization: **k1=20, k2=6, λ=0.3**.
 
-### Lightweight Dual Attention Module (LDAM)
-Combines channel attention (which features matter) and spatial attention 
-(where to focus) with minimal parameter overhead.
+### Training Configuration
 
-### Multi-Modal Fusion Weights
-| Modality | Weight |
-|----------|--------|
-| Appearance features | 50% |
-| Gait embeddings | 25% |
-| Biometric part features | 15% |
-| Attention hotspot cues | 10% |
+| Hyperparameter | Value |
+|---|---|
+| Optimizer | Adam |
+| Learning rate | 0.00035 |
+| Weight decay | 5e-4 |
+| Epochs | 200 |
+| Warmup | 10 epochs |
+| LR decay epochs | 40, 70, 100 |
+| Input size | 256 × 128 |
+| Batch size | 32 |
 
----
-
-## Sample Results
-
-### Hotspot Detection
-![Hotspot](results/hotspot_detection.png)
-
-### Multi-Branch Feature Maps
-![Multi-Branch](results/multi_branch.png)
-
-### Tracking with Consistent IDs Across Camera Views
-Persons correctly re-identified with the same ID after disappearing from 
-one camera and reappearing from a different angle.
+Data augmentation: random horizontal flip, random crop with padding, random erasing.  
+Test-time augmentation: average of original and horizontally flipped features.
 
 ---
 
 ## Datasets
 
-| Dataset | Identities | Sequences | Environment |
-|---------|-----------|-----------|-------------|
-| [MARS](https://zheng-lab.cecs.anu.edu.au/Project/project_mars.html) | 1,261 | 20,715 tracklets | University campus |
-| [DukeMTMC-VideoReID](https://www.kaggle.com/datasets/leonardonaldi/duke-mtmc) | 1,404 | 2,196 tracklets | Outdoor campus |
-| [CASIA-B](https://www.kaggle.com/datasets/trnquanghuyn/casia-b) | 124 subjects | 13,640 sequences | Indoor lab |
+| Dataset | Identities | Images | Cameras |
+|---|---|---|---|
+| [Market-1501](https://zheng-lab.cecs.anu.edu.au/Project/project_reid.html) | 1,501 | 32,668 | 6 |
+| [DukeMTMC-reID](https://github.com/layumi/DukeMTMC-reID_evaluation) | 1,404 | 36,411 | 8 |
 
-Download datasets from the links above and place them under `data/` directory.
+Download datasets and place under `data/`:
+```
+data/
+  Market-1501-v15.09.15/
+    bounding_box_train/
+    bounding_box_test/
+    query/
+  DukeMTMC-reID/
+    bounding_box_train/
+    bounding_box_test/
+    query/
+```
 
 ---
 
-## Installation
+## Usage
+
+### Installation
 
 ```bash
-git clone https://github.com/036priyadharshini/hierarchical-fusion-person-reid
-cd hierarchical-fusion-person-reid
+git clone https://github.com/036priyadharshini/hierarchical-fusion-person-re-identification
+cd hierarchical-fusion-person-re-identification
 pip install -r requirements.txt
 ```
 
----
-
-## Training
+### Evaluation
 
 ```bash
-python src/train.py \
-  --dataset mars \
-  --data-dir ./data/mars \
-  --epochs 120 \
-  --batch-size 32 \
-  --gpu-id 0
+python evaluate.py \
+  --data-root data/Market-1501-v15.09.15 \
+  --model-path checkpoints/model.pth
 ```
 
 ---
 
-## Evaluation
+## Ablation Study (Market-1501)
 
-```bash
-python src/test.py \
-  --dataset mars \
-  --data-dir ./data/mars \
-  --model-path ./checkpoints/best_model.pth
-```
-
----
-
-## Tech Stack
-
-`PyTorch` `YOLOX` `Torchreid` `ONNX Runtime` `OpenCV` `Python 3.8+`
+| Configuration | mAP (%) | Rank-1 (%) |
+|---|---|---|
+| Baseline (CE + Triplet) | 87.3 | 94.8 |
+| + Center Loss | 88.5 | 95.1 |
+| + Focal Tversky Loss | 89.4 | 95.4 |
+| + Optimized Re-ranking | **95.1** | **96.3** |
 
 ---
 
+## Stack
+
+`PyTorch` · `ResNet50-IBN` · `GeM Pooling` · `ONNX Runtime` · `OpenCV`
