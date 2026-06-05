@@ -345,7 +345,6 @@ def evaluate(data_root: str, model_path: str, num_classes: int = 751):
 
     print(f"Gain:  +{map_r - map_b:.2f}% mAP  /  +{r1_r - r1_b:.2f}% Rank-1")
 
-
 if __name__ == '__main__':
     import argparse
 
